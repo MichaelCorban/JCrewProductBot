@@ -24,7 +24,6 @@ driver_path = os.path.join(current_dir, 'chromedriverundetectable.exe')
 ser = Service(driver_path)
 op = webdriver.ChromeOptions()
 
-#op.add_argument("start-maximized")
 op.add_argument('--disable-blink-features=AutomationControlled')
 op.add_experimental_option("excludeSwitches", ["enable-automation"])
 op.add_experimental_option('useAutomationExtension', False)
@@ -35,15 +34,6 @@ driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": 'Mozilla/5.
                                                                      'AppleWebKit/537.36 (KHTML, like Gecko) '
                                                                      'Chrome/85.0.4183.102 Safari/537.36'})
 
-
-#op.add_experimental_option("excludeSwitches", ["enable-automation"])
-#op.add_experimental_option('useAutomationExtension', False)
-#user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/33.0.1750.517 Safari/537.36'
-#op.add_argument('user-agent={0}'.format(user_agent))
-#op.add_argument("--headless=new")
-
-# start the web driver
-#driver = webdriver.Chrome(service=ser, options=op)
 
 # get sitemap XML
 response = requests.get(sitemap)
@@ -71,10 +61,11 @@ for xml in pdp_us_list:
         if text is not None and "http" in text:
             product_list.append(text.strip())
 
-print(len(product_list))
+#print(len(product_list))
 
 data=[]
 count = 0
+# main loop for scraping info from all product URLs
 for url in product_list[0::]:
     count +=1
     print("requesting", url, "number", count)
@@ -82,22 +73,18 @@ for url in product_list[0::]:
         response = requests.get(url, headers = headers, timeout = 5)
     except:
         continue
-    #driver = webdriver.Chrome(service=ser, options=op)
+
     try:
         driver.get(url)
     except:
         time.sleep(10)
         continue
+        
     html_data = response.text
     soup = BeautifulSoup(html_data, 'html.parser')
-    #page_source = driver.page_source
-    #print(page_source)
-    #time.sleep(2)
-    # product name
+  
     try:
-        #name = soup.find("h1", {"id": "product-name__p"}).text.replace('\n', "")
         name = soup.find("h1", {"data-qaid": "pdpProductName"}).text.replace('\n', "")
-        #name = soup.find("h1", {"data-qaid": "pdpProductName"})
     except:
         name = None
 
@@ -120,6 +107,7 @@ for url in product_list[0::]:
     except:
         priceSale = None
 
+    # average rating
     try:
         script_element = driver.find_element("xpath", '(//script[@type="application/ld+json"])[2]')
         script_text = script_element.get_attribute("textContent")
@@ -129,6 +117,7 @@ for url in product_list[0::]:
     except:
         ratingAvg = None
 
+    # keywords
     try:
         script_element = driver.find_element("xpath", '(//script[@type="application/ld+json"])[2]')
         script_text = script_element.get_attribute("textContent")
@@ -138,6 +127,7 @@ for url in product_list[0::]:
     except:
         keywords = None
 
+    # number of ratings
     try:
         script_element = driver.find_element("xpath", '(//script[@type="application/ld+json"])[2]')
         script_text = script_element.get_attribute("textContent")
@@ -146,6 +136,7 @@ for url in product_list[0::]:
     except:
         ratingCount = None
 
+    # category
     try:
         script_element = driver.find_element("xpath", '(//script[@type="application/ld+json"])[2]')
         script_text = script_element.get_attribute("textContent")
@@ -154,54 +145,18 @@ for url in product_list[0::]:
     except:
         category = None
 
-
-    # rating
-    #element = driver.find_element("xpath", '//div[@class="class="BVRRNumber BVRRRatingNumber"]')
-    # find the script element using XPath and retrieve its text content
-    #script_element = driver.find_element("xpath", '(//script[@type="application/ld+json"])[2]')
-    #script_text = script_element.get_attribute("textContent")
-    #print(script_text)
-    #match = re.search(r'"ratingValue":(\d+)', script_text)
-    #if match:
-        #rating_value = match.group(1)
-        #print(rating_value)
-    #else:
-        #print("ratingValue not found")
-    #rating = element.get_attribute('title')
-    #print(rating)
-
-    '''
-    try:
-        sizes = soup.find("h1", {"id": "product-name__p"}).text.replace('\n', "")
-    except:
-        sizes = None
-    try:
-        colors = soup.find("h1", {"id": "product-name__p"}).text.replace('\n', "")
-    except:
-        colors = None
-    '''
-
-    #rating = None
-    #sizes = None
-    #colors = None
-
     # ideally implement "sizes": sizes, "colors": colors later
     product_data = {"name": name, "priceReg": priceRegular, "priceSale": priceSale, "ratingAvg": ratingAvg, "ratingCnt": ratingCount, "category": category, "keywords": keywords}
     data.append(product_data)
-    #driver.close()
     if count % 10 == 0:
         with open('data.csv', mode='w', newline='', encoding="utf-8") as file:
 
-            # Define the fieldnames for the CSV file
+            # define the fieldnames for the CSV file
             fieldnames = ['name', 'priceReg', 'priceSale', 'ratingAvg', 'ratingCnt', 'category', 'keywords']
 
-            # Create a CSV writer object
             writer = csv.DictWriter(file, fieldnames=fieldnames)
-
-            # Write the header row to the CSV file
             writer.writeheader()
 
-            # Write the data to the CSV file
             for row in data:
                 writer.writerow(row)
 
