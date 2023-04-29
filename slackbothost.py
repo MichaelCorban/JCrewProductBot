@@ -24,8 +24,6 @@ app = App(
 @app.event("message")
 def event_test(message, body, say, logger):
     logger.info(body)
-    print(message['text'])
-    #say("what's up?")
     inpt = message['text']
     response = chatbotpy311.query(inpt)
     say(response)
